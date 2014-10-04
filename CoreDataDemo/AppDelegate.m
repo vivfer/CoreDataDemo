@@ -7,7 +7,7 @@
 //
 
 #import "AppDelegate.h"
-
+#import "Jianleer.h"
 @interface AppDelegate ()
 
 @end
@@ -17,7 +17,132 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
+    
+    NSLog(@"homePath : %@",NSHomeDirectory());
+    [self insertData];
+    [self deleteData];
+    [self updataDataWithName:@"百里屠苏" withAge:@5000];
+    [self searchData];
+    
+    
+    
     return YES;
+}
+
+
+-(void)insertData{
+    
+    //没运行一次插入一次
+    
+    NSManagedObjectContext *context      = self.managedObjectContext;
+    NSManagedObject        *jianleer     = [NSEntityDescription insertNewObjectForEntityForName:@"Jianleer" inManagedObjectContext:context];
+    
+    [jianleer setValue:@"jianlee" forKey:@"name"];
+    [jianleer setValue:@18 forKey:@"age"];
+    
+    
+    
+    
+    Jianleer *jl    =   [NSEntityDescription insertNewObjectForEntityForName:@"Jianleer" inManagedObjectContext:context];
+    jl.name         =   @"百里屠苏";
+    jl.age          =   @100;
+    
+    
+    Jianleer *wk    =   [NSEntityDescription insertNewObjectForEntityForName:@"Jianleer" inManagedObjectContext:context];
+    wk.name         =   @"孙悟空";
+    wk.age          =   @500;
+    
+    
+    [self saveContext];
+
+}
+
+-(void)deleteData
+{
+    NSEntityDescription     *entity     = [NSEntityDescription entityForName:@"Jianleer" inManagedObjectContext:self.self.managedObjectContext];
+    
+    NSFetchRequest          *rq         = [[[NSFetchRequest alloc] init] autorelease];
+    
+    [rq setIncludesPropertyValues:YES];
+    [rq setEntity:entity];
+    
+    NSError                 *error      = nil;
+    NSArray                 *datas      = [self.managedObjectContext executeFetchRequest:rq error:&error];
+    
+    if (!error && datas && [datas count]) {
+        for (NSManagedObject *obj in datas) {
+            if ([[obj valueForKey:@"name"] isEqualToString:@"孙悟空"]) {
+                [self.managedObjectContext deleteObject:obj];
+
+            }
+            
+        }
+        if (![self.managedObjectContext save:&error]) {
+            NSLog(@"error : %@",error);
+        }else
+        {
+            NSLog(@"删除成功");
+        }
+    }
+    
+}
+
+
+-(void)searchData
+{
+    NSManagedObjectContext  *context    = self.managedObjectContext;
+    //要搜索那个类型的实体对象 就索检那个 Entity
+    NSEntityDescription     *end        = [NSEntityDescription entityForName:@"Jianleer" inManagedObjectContext:context];
+    NSFetchRequest          *request    =[[NSFetchRequest new]autorelease];
+    [request setEntity:end];
+    
+    NSError                 *error      = nil;
+    NSArray                 *dataArray  = [context executeFetchRequest:request error:&error];
+    if (dataArray) {
+        for (NSManagedObject *obj in dataArray) {
+           // NSLog(@"结果 : %@",obj);
+            NSString*name = [obj valueForKey:@"name"];
+            NSString*age  = [obj valueForKey:@"age"];
+            NSLog(@"name : %@  age : %@",name,age );
+            
+            
+        }
+    }
+    
+    
+}
+
+
+-(void)updataDataWithName:(NSString*)name withAge:(NSNumber*)age{
+    //@"name like[cd] %@",name  查询name是传进来name的那条记录 找到之后执行后面的修改
+    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"name like[cd] %@",name];
+    //IOS 之 谓词(NSPredicate)
+    //在语⾔言上,谓语,谓词是用来判断的,比如 “我是程序猿” 中的是,就是表判断的谓语, “是” 就是⼀一个谓词,在objective-c中,应该说在Cocoa中的NSPredicate表示的就是⼀一种 判断。⼀一种条件的构建。我们可以先通过NSPredicate中的predicateWithFormat⽅方法来 ⽣生成⼀一个NSPredicate对象表示⼀一个条件,然后在别的对象中通过evaluateWithObject ⽅方法来进⾏行判断,返回⼀一个布尔值。
+    //request
+    NSFetchRequest *request     = [[NSFetchRequest alloc] init];
+    [request setEntity:[NSEntityDescription entityForName:@"Jianleer" inManagedObjectContext:self.managedObjectContext]];
+    
+    [request setPredicate:predicate];
+    NSError *error              = nil;
+    NSArray *result             = [self.managedObjectContext executeFetchRequest:request error:&error];//此处获取的是一个数组,需要取出你要更新的那个obj
+    for (Jianleer *obj in result) {
+        obj.name                = name;
+        obj.age                 = age;
+    }
+    
+    
+    //保存
+    if ([self.managedObjectContext save:&error]) {
+        NSLog(@"更新成功");
+    }else
+    {
+        NSLog(@"error : %@",[error localizedDescription]);
+    }
+    
+    
+    
+    
+    
 }
 
 - (void)applicationWillResignActive:(UIApplication *)application {
@@ -60,7 +185,7 @@
     if (_managedObjectModel != nil) {
         return _managedObjectModel;
     }
-    NSURL *modelURL = [[NSBundle mainBundle] URLForResource:@"CoreDataDemo" withExtension:@"momd"];
+    NSURL *modelURL     = [[NSBundle mainBundle] URLForResource:@"CoreDataDemo" withExtension:@"momd"];
     _managedObjectModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:modelURL];
     return _managedObjectModel;
 }
@@ -74,7 +199,7 @@
     // Create the coordinator and store
     
     _persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
-    NSURL *storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:@"CoreDataDemo.sqlite"];
+    NSURL *storeURL         = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:@"CoreDataDemo.sqlite"];
     NSError *error = nil;
     NSString *failureReason = @"There was an error creating or loading the application's saved data.";
     if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:nil error:&error]) {
